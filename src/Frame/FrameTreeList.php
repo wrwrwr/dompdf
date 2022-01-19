@@ -7,6 +7,7 @@ use Dompdf\Frame;
 /**
  * Pre-order IteratorAggregate
  *
+ * @deprecated
  * @access private
  * @package dompdf
  */

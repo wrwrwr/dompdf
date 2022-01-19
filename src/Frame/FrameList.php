@@ -7,6 +7,7 @@ use IteratorAggregate;
 /**
  * Linked-list IteratorAggregate
  *
+ * @deprecated
  * @access private
  * @package dompdf
  */
