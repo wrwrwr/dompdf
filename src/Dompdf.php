@@ -95,6 +95,13 @@ class Dompdf
     private $css;
 
     /**
+     * Bookmarks tree
+     *
+     * @var Outline
+     */
+    private $outline;
+
+    /**
      * Actual PDF renderer
      *
      * @var Canvas
@@ -274,6 +281,7 @@ class Dompdf
         $this->canvas = CanvasFactory::get_instance($this, $this->paperSize, $this->paperOrientation);
         $this->fontMetrics = new FontMetrics($this->canvas, $this->options);
         $this->css = new Stylesheet($this);
+        $this->outline = new Outline($this->options);
 
         $this->restorePhpConfig();
     }
@@ -555,7 +563,7 @@ class Dompdf
 
     /**
      * Builds the {@link FrameTree}, loads any CSS and applies the styles to
-     * the {@link FrameTree}
+     * the {@link FrameTree}, and generates the outline from headings.
      */
     private function processHtml()
     {
@@ -659,6 +667,8 @@ class Dompdf
             $this->css->set_host($this->baseHost);
             $this->css->set_base_path($this->basePath);
         }
+
+        $this->outline->from_document($xpath);
     }
 
     /**
@@ -772,6 +782,7 @@ class Dompdf
                 continue;
             }
             Factory::decorate_frame($frame, $this, $root);
+            $this->outline->decorate_frame($frame);
         }
 
         // Add meta information
@@ -1488,6 +1499,24 @@ class Dompdf
     public function getFontMetrics()
     {
         return $this->fontMetrics;
+    }
+
+    /**
+     * @param Outline $outline
+     * @return $this
+     */
+    public function setOutline(Outline $outline)
+    {
+        $this->outline = $outline;
+        return $this;
+    }
+
+    /**
+     * @return Outline
+     */
+    public function getOutline()
+    {
+        return $this->outline;
     }
 
     /**

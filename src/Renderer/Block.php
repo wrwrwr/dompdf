@@ -42,8 +42,10 @@ class Block extends AbstractRenderer
         $this->_render_border($frame, $border_box);
         $this->_render_outline($frame, $border_box);
 
-        $this->addNamedDest($node);
+        $this->addNamedDest($node, $border_box);
         $this->addHyperlink($node, $border_box);
+        $this->addOutlineItem($frame, $border_box);
+
         $this->debugBlockLayout($frame, "red", false);
     }
 

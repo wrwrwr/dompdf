@@ -62,7 +62,7 @@ class TableCell extends Block
             $this->_render_outline($frame, $border_box);
         }
 
-        $this->addNamedDest($node);
+        $this->addNamedDest($node, $border_box);
         $this->addHyperlink($node, $border_box);
         $this->debugBlockLayout($frame, "red", false);
     }
