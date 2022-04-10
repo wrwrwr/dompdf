@@ -67,7 +67,7 @@ class Image extends Block
             }
         }
 
-        $this->addNamedDest($node);
+        $this->addNamedDest($node, $border_box);
         $this->debugBlockLayout($frame, "blue");
     }
 }

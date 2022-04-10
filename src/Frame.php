@@ -132,6 +132,20 @@ class Frame
     protected $_is_cache = [];
 
     /**
+     * Id of the item in the outline (null for nodes without a bookmark).
+     *
+     * @var ?string
+     */
+    protected $_outline_id = null;
+
+    /**
+     * Id of the frame's parent in the outline tree (null for top-level items).
+     *
+     * @var ?string
+     */
+    protected $_outline_parent_id = null;
+
+    /**
      * Tells whether the frame was already pushed to the next page
      *
      * @var bool
@@ -633,6 +647,22 @@ class Frame
         return $this->_containing_line;
     }
 
+    /**
+     * @return ?string
+     */
+    public function get_outline_id(): ?string
+    {
+        return $this->_outline_id;
+    }
+
+    /**
+     * @return ?string
+     */
+    public function get_outline_parent_id(): ?string
+    {
+        return $this->_outline_parent_id;
+    }
+
     //........................................................................
     // Set methods
 
@@ -734,6 +764,22 @@ class Frame
     public function set_containing_line(LineBox $line)
     {
         $this->_containing_line = $line;
+    }
+
+    /**
+     * @param ?string $id
+     */
+    public function set_outline_id(?string $id): void
+    {
+        $this->_outline_id = $id;
+    }
+
+    /**
+     * @param ?string $parent_id
+     */
+    public function set_outline_parent_id(?string $parent_id): void
+    {
+        $this->_outline_parent_id = $parent_id;
     }
 
     /**
@@ -912,6 +958,13 @@ class Frame
         return $this->_is_cache["table"] = in_array($display, Style::TABLE_TYPES, true);
     }
 
+    /**
+     * @return bool
+     */
+    public function is_in_outline(): bool
+    {
+        return $this->_outline_id !== null;
+    }
 
     /**
      * Inserts a new child at the beginning of the Frame
