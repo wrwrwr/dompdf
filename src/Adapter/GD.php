@@ -683,7 +683,34 @@ class GD implements Canvas
         // Not implemented
     }
 
-    public function add_named_dest($anchorname)
+    /**
+     * Adds a named destination that can be navigated to.
+     *
+     * @param string $name a unique label for the destination
+     * @param array $target page, fit mode and position
+     *
+     * The target array should consist of a 'mode' (XYZ or Fit[H|V|R|B|BH|BV])
+     * and optionally 'page', 'left', 'right', 'top', 'bottom', 'zoom'.
+     * Please see Table 151 in PDF 32000-1:2008 for a detailed description.
+     */
+    public function add_named_dest($name, $target = [])
+    {
+        // Not implemented
+    }
+
+    /**
+     * Adds a document navigation / bookmarks item.
+     *
+     * @param string $name a unique id for the item
+     * @param string|null $parent id of the parent (null for top-level items)
+     * @param string $title visible in the bookmarks
+     * @param array $target page, fit mode and position
+     *
+     * The target array should consist of a 'mode' (XYZ or Fit[H|V|R|B|BH|BV])
+     * and optionally 'page', 'left', 'right', 'top', 'bottom', 'zoom'.
+     * Please see Table 151 in PDF 32000-1:2008 for a detailed description.
+     */
+    public function add_outline_item($name, $parent, $title, $target = [])
     {
         // Not implemented
     }

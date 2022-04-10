@@ -314,6 +314,16 @@ class Cpdf
     public $destinations = [];
 
     /**
+     * @var int Id of the top-level outline object.
+     */
+    public $outline;
+
+    /**
+     * @var array Maps outline item labels to object ids.
+     */
+    public $outlineItems = [];
+
+    /**
      * @var array Store the stack for the transaction commands, each item in here is a record of the values of all the
      * publiciables within the class, so that the user can rollback at will (from each 'start' command)
      * note that this includes the objects array, so these can be large.
@@ -442,44 +452,52 @@ class Cpdf
      */
 
     /**
-     * Destination object, used to specify the location for the user to jump to, presently on opening
+     * Destination object, used to specify the location for the user to jump to
      *
      * @param $id
      * @param $action
-     * @param string $options
+     * @param array $options
      * @return string|null
      */
-    protected function o_destination($id, $action, $options = '')
+    protected function o_destination($id, $action, $options = [])
     {
         switch ($action) {
             case 'new':
-                $this->objects[$id] = ['t' => 'destination', 'info' => []];
-                $tmp = '';
-                switch ($options['type']) {
+                $page = $options['page'] ?? $this->currentPage;
+                $mode = $options['mode'] ?? 'Fit';
+                switch ($mode) {
                     case 'XYZ':
-                    /** @noinspection PhpMissingBreakStatementInspection */
-                    case 'FitR':
-                        $tmp = ' ' . $options['p3'] . $tmp;
-                    case 'FitH':
-                    case 'FitV':
-                    case 'FitBH':
-                    /** @noinspection PhpMissingBreakStatementInspection */
-                    case 'FitBV':
-                        $tmp = ' ' . $options['p1'] . ' ' . $options['p2'] . $tmp;
+                        $args = ' ' . ($options['left'] ?? 'null') . ' ' . ($options['top'] ?? 'null') . ' ' . ($options['zoom'] ?? 'null');
+                        break;
                     case 'Fit':
                     case 'FitB':
-                        $tmp = $options['type'] . $tmp;
-                        $this->objects[$id]['info']['string'] = $tmp;
-                        $this->objects[$id]['info']['page'] = $options['page'];
+                        $args = '';
+                        break;
+                    case 'FitH':
+                    case 'FitBH':
+                        $args = ' ' . ($options['top'] ?? 'null');
+                        break;
+                    case 'FitV':
+                    case 'FitBV':
+                        $args = ' ' . ($options['left'] ?? 'null');
+                        break;
+                    case 'FitR':
+                        $args = ' ' . $options['left'] . ' ' . $options['bottom'] . ' ' . $options['right'] . ' ' . $options['top'];
+                        break;
                 }
+                $this->objects[$id] = [
+                    't' => 'destination',
+                    'info' => [
+                        'page' => $page,
+                        'mode' => $mode,
+                        'args' => $args
+                    ]
+                ];
                 break;
 
             case 'out':
-                $o = &$this->objects[$id];
-
-                $tmp = $o['info'];
-                $res = "\n$id 0 obj\n" . '[' . $tmp['page'] . ' 0 R /' . $tmp['string'] . "]\nendobj";
-
+                $info = $this->objects[$id]['info'];
+                $res = "\n$id 0 obj\n [{$info['page']} 0 R /{$info['mode']}{$info['args']}]\nendobj";
                 return $res;
         }
 
@@ -870,7 +888,7 @@ class Cpdf
     }
 
     /**
-     * define the outlines in the doc, empty for now
+     * The root outline dictionary.
      *
      * @param $id
      * @param $action
@@ -879,32 +897,81 @@ class Cpdf
      */
     protected function o_outlines($id, $action, $options = '')
     {
-        if ($action !== 'new') {
-            $o = &$this->objects[$id];
-        }
-
         switch ($action) {
             case 'new':
-                $this->objects[$id] = ['t' => 'outlines', 'info' => ['outlines' => []]];
+                $this->objects[$id] = [
+                    't' => 'outlines',
+                    'info' => [
+                        'items' => []
+                    ]
+                ];
                 $this->o_catalog($this->catalogId, 'outlines', $id);
-                break;
-
-            case 'outline':
-                $o['info']['outlines'][] = $options;
+                $this->outline = $id;
                 break;
 
             case 'out':
-                if (count($o['info']['outlines'])) {
-                    $res = "\n$id 0 obj\n<< /Type /Outlines /Kids [";
-                    foreach ($o['info']['outlines'] as $v) {
-                        $res .= "$v 0 R ";
-                    }
-
-                    $res .= "] /Count " . count($o['info']['outlines']) . " >>\nendobj";
-                } else {
-                    $res = "\n$id 0 obj\n<< /Type /Outlines /Count 0 >>\nendobj";
+                $res = "\n$id 0 obj\n<< /Type /Outlines\n";
+                $info = $this->objects[$id]['info'];
+                if ($info['items']) {
+                    $res .= "/First " . reset($info['items']) . " 0 R\n";
+                    $res .= "/Last " . end($info['items']) . " 0 R\n";
+                    // Start with just the top-level items visible and everything
+                    // else collapsed (count for open items is the number of visible
+                    // descendants, and for closed items it is the negative of that).
+                    $res .= "/Count " . count($info['items']) . "\n";
                 }
+                $res .= ">>\nendobj";
+                return $res;
+        }
 
+        return null;
+    }
+
+    /**
+     * An outline tree node or leaf, pointing to a named destination.
+     *
+     * @param $id
+     * @param $action
+     * @param string $options
+     * @return string|null
+     */
+    protected function o_outlineItem($id, $action, $options = '')
+    {
+        switch ($action) {
+            case 'new':
+                $this->objects[$id] = [
+                    't' => 'outlineItem',
+                    'info' => [
+                        'parent' => $options['parent'],
+                        'title' => $options['title'],
+                        'dest' => $options['dest'],
+                        'items' => []
+                    ]
+                ];
+                $this->objects[$options['parent']]['info']['items'][] = $id;
+                break;
+
+            case 'out':
+                $info = $this->objects[$id]['info'];
+                $title = $this->filterText($info['title']);
+                $res = "\n$id 0 obj\n<< /Title ($title)\n";
+                $res .= "/Parent {$info['parent']} 0 R\n";
+                $parentItems = $this->objects[$info['parent']]['info']['items'];
+                $index = array_search($id, $parentItems);
+                if ($index > 0) {
+                    $res .= "/Prev {$parentItems[$index - 1]} 0 R\n";
+                }
+                if ($index < count($parentItems) - 1) {
+                    $res .= "/Next {$parentItems[$index + 1]} 0 R\n";
+                }
+                $items = $info['items'];
+                if ($items) {
+                    $res .= "/First " . reset($items) . " 0 R\n";
+                    $res .= "/Last " . end($items) . " 0 R\n";
+                    $res .= "/Count -" . count($items) . "\n";
+                }
+                $res .= "/Dest {$info['dest']} 0 R\n";
+                $res .= ">>\nendobj";
                 return $res;
         }
 
@@ -6606,33 +6673,15 @@ EOT;
     }
 
     /**
-     * specify where the document should open when it first starts
+     * Specifies the page that the document should show when it is opened.
      *
-     * @param $style
-     * @param int $a
-     * @param int $b
-     * @param int $c
+     * @param array $target
      */
-    function openHere($style, $a = 0, $b = 0, $c = 0)
+    function openHere($target)
     {
-        // this function will open the document at a specified page, in a specified style
-        // the values for style, and the required parameters are:
-        // 'XYZ'  left, top, zoom
-        // 'Fit'
-        // 'FitH' top
-        // 'FitV' left
-        // 'FitR' left,bottom,right
-        // 'FitB'
-        // 'FitBH' top
-        // 'FitBV' left
         $this->numObj++;
-        $this->o_destination(
-            $this->numObj,
-            'new',
-            ['page' => $this->currentPage, 'type' => $style, 'p1' => $a, 'p2' => $b, 'p3' => $c]
-        );
-        $id = $this->catalogId;
-        $this->o_catalog($id, 'openHere', $this->numObj);
+        $this->o_destination($this->numObj, 'new', $target);
+        $this->o_catalog($this->catalogId, 'openHere', $this->numObj);
     }
 
     /**
@@ -6646,29 +6695,45 @@ EOT;
     }
 
     /**
-     * create a labelled destination within the document
+     * Creates a named destination that can be navigated to.
      *
-     * @param $label
-     * @param $style
-     * @param int $a
-     * @param int $b
-     * @param int $c
+     * @param string $name a unique label for the destination
+     * @param array $target page, fit mode and location
      */
-    function addDestination($label, $style, $a = 0, $b = 0, $c = 0)
+    function addDestination($name, $target)
     {
-        // associates the given label with the destination, it is done this way so that a destination can be specified after
-        // it has been linked to
-        // styles are the same as the 'openHere' function
         $this->numObj++;
-        $this->o_destination(
+        $this->o_destination($this->numObj, 'new', $target);
+        $this->destinations[$name] = $this->numObj;
+    }
+
+    /**
+     * Creates an outline entry pointing to a named destination.
+     *
+     * @param string $name a unique label for the item
+     * @param string|null $parent label of the parent in the outline tree
+     * @param string $title the bookmark text
+     * @param string $dest the name of the destination
+     */
+    function addOutlineItem($name, $parent, $title, $dest)
+    {
+        $this->numObj++;
+        if ($parent === null) {
+            $parentId = $this->outline;
+        } else {
+            $parentId = $this->outlineItems[$parent];
+        }
+        $destId = $this->destinations[$dest];
+        $this->o_outlineItem(
             $this->numObj,
             'new',
-            ['page' => $this->currentPage, 'type' => $style, 'p1' => $a, 'p2' => $b, 'p3' => $c]
+            [
+                'title' => $title,
+                'parent' => $parentId,
+                'dest' => $destId
+            ]
         );
-        $id = $this->numObj;
-
-        // store the label->idf relationship, note that this means that labels can be used only once
-        $this->destinations["$label"] = $id;
+        $this->outlineItems[$name] = $this->numObj;
     }
 
     /**

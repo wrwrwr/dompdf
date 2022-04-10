@@ -264,6 +264,17 @@ class Options
     private $isFontSubsettingEnabled = true;
 
     /**
+     * Determines what will be included in the document outline.
+     *
+     * This should be an DOMXPath expression; for example, to include all
+     * h2 and h3 headings set it to "//h2 | //h3". Outline generation is
+     * disabled if empty (the default).
+     *
+     * @var string
+     */
+    private $outlineSelector = "";
+
+    /**
      * @var bool
      */
     private $debugPng = false;
@@ -429,6 +440,8 @@ class Options
                 $this->setIsHtml5ParserEnabled($value);
             } elseif ($key === 'isFontSubsettingEnabled' || $key === 'is_font_subsetting_enabled' || $key === 'enable_font_subsetting') {
                 $this->setIsFontSubsettingEnabled($value);
+            } elseif ($key === 'outlineSelector' || $key === 'outline_selector') {
+                $this->setOutlineSelector($value);
             } elseif ($key === 'debugPng' || $key === 'debug_png') {
                 $this->setDebugPng($value);
             } elseif ($key === 'debugKeepTemp' || $key === 'debug_keep_temp') {
@@ -502,6 +515,8 @@ class Options
             return $this->getIsHtml5ParserEnabled();
         } elseif ($key === 'isFontSubsettingEnabled' || $key === 'is_font_subsetting_enabled' || $key === 'enable_font_subsetting') {
             return $this->getIsFontSubsettingEnabled();
+        } elseif ($key === 'outlineSelector' || $key === 'outline_selector') {
+            return $this->getOutlineSelector();
         } elseif ($key === 'debugPng' || $key === 'debug_png') {
             return $this->getDebugPng();
         } elseif ($key === 'debugKeepTemp' || $key === 'debug_keep_temp') {
@@ -994,6 +1009,24 @@ class Options
     public function isFontSubsettingEnabled()
     {
         return $this->getIsFontSubsettingEnabled();
+    }
+
+    /**
+     * @param string $outlineSelector
+     * @return $this
+     */
+    public function setOutlineSelector($outlineSelector)
+    {
+        $this->outlineSelector = $outlineSelector;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getOutlineSelector()
+    {
+        return $this->outlineSelector;
     }
 
     /**

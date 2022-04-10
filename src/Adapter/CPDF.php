@@ -438,8 +438,34 @@ class CPDF implements Canvas
 
     public function set_default_view($view, $options = [])
     {
-        array_unshift($options, $view);
-        call_user_func_array([$this->_pdf, "openHere"], $options);
+        $target = $options;
+        $target['mode'] ??= $view;
+        // Backwards compatibility with former (p1 / p2 / p3) view options.
+        switch ($view) {
+            case 'XYZ':
+                $target['left'] ??= $options['p1'] ?? null;
+                $target['top'] ??= $options['p2'] ?? null;
+                $target['zoom'] ??= $options['p3'] ?? null;
+                break;
+            case 'Fit':
+            case 'FitB':
+                break;
+            case 'FitH':
+            case 'FitBH':
+                $target['top'] ??= $options['p1'] ?? null;
+                break;
+            case 'FitV':
+            case 'FitBV':
+                $target['left'] ??= $options['p1'] ?? null;
+                break;
+            case 'FitR':
+                $target['left'] ??= $options['p1'] ?? null;
+                $target['bottom'] ??= $options['p2'] ?? null;
+                $target['right'] ??= $options['p3'] ?? null;
+                $target['top'] ??= $options['p4'] ?? null;
+                break;
+        }
+        $this->_pdf->openHere($target);
     }
 
     /**
@@ -597,7 +623,6 @@ class CPDF implements Canvas
         if ($filename !== null && file_exists($filename)) {
             return $filename;
         }
- 
         $func_name = "imagecreatefrom$type";
 
         set_error_handler([Helpers::class, "record_warnings"]);
@@ -766,9 +791,43 @@ class CPDF implements Canvas
 
     //........................................................................
 
-    public function add_named_dest($anchorname)
+    /**
+     * Adds a named destination that can be navigated to.
+     *
+     * @param string $name a unique label for the destination
+     * @param array $target page, fit mode and position after navigating
+     *
+     * The target array should consist of a 'mode' (XYZ or Fit[H|V|R|B|BH|BV])
+     * and optionally 'page', 'left', 'right', 'top', 'bottom', 'zoom'.
+     * Please see Table 151 in PDF 32000-1:2008 for a detailed description.
+     */
+    public function add_named_dest($name, $target = [])
     {
-        $this->_pdf->addDestination($anchorname, "Fit");
+        if (isset($target['top'])) {
+            $target['top'] = $this->y($target['top']);
+        }
+        if (isset($target['bottom'])) {
+            $target['bottom'] = $this->y($target['bottom']);
+        }
+        $this->_pdf->addDestination($name, $target);
+    }
+
+    /**
+     * Adds a document navigation / bookmarks item.
+     *
+     * @param string $name a unique id for the item
+     * @param string|null $parent id of the parent (null for top-level items)
+     * @param string $title visible in the bookmarks
+     * @param array $target page, fit mode and position
+     *
+     * The target array should consist of a 'mode' (XYZ or Fit[H|V|R|B|BH|BV])
+     * and optionally 'page', 'left', 'right', 'top', 'bottom', 'zoom'.
+     * Please see Table 151 in PDF 32000-1:2008 for a detailed description.
+     */
+    public function add_outline_item($name, $parent, $title, $target = [])
+    {
+        $this->add_named_dest($name, $target);
+        $this->_pdf->addOutlineItem($name, $parent, $title, $name);
     }
 
     public function add_link($url, $x, $y, $width, $height)

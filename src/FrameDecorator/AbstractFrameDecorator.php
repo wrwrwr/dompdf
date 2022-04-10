@@ -357,6 +357,16 @@ abstract class AbstractFrameDecorator extends Frame
         return $this->_frame->get_border_box();
     }
 
+    public function get_outline_id(): ?string
+    {
+        return $this->_frame->get_outline_id();
+    }
+
+    public function get_outline_parent_id(): ?string
+    {
+        return $this->_frame->get_outline_parent_id();
+    }
+
     function set_id($id)
     {
         $this->_frame->set_id($id);
@@ -385,6 +395,11 @@ abstract class AbstractFrameDecorator extends Frame
     function is_auto_width()
     {
         return $this->_frame->is_auto_width();
+    }
+
+    public function is_in_outline(): bool
+    {
+        return $this->_frame->is_in_outline();
     }
 
     function __toString()

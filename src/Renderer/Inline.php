@@ -58,7 +58,7 @@ class Inline extends AbstractRenderer
         $this->_render_border($frame, $border_box);
         $this->_render_outline($frame, $border_box);
 
-        $this->addNamedDest($node);
+        $this->addNamedDest($node, $border_box);
         $this->addHyperlink($node, $border_box);
 
         $options = $this->_dompdf->getOptions();

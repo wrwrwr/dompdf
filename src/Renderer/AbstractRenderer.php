@@ -1238,18 +1238,20 @@ abstract class AbstractRenderer
      * with `name` attribute.
      *
      * @param DOMElement $node
+     * @param float[]    $borderBox
      */
-    protected function addNamedDest(DOMElement $node): void
+    protected function addNamedDest(DOMElement $node, array $border_box): void
     {
+        $target = ['mode' => 'XYZ', 'top' => $border_box[1]];
         $id = $node->getAttribute("id");
         if ($id !== "") {
-            $this->_canvas->add_named_dest($id);
+            $this->_canvas->add_named_dest($id, $target);
         }
 
         if ($node->nodeName === "a") {
             $name = $node->getAttribute("name");
             if ($name !== "") {
-                $this->_canvas->add_named_dest($name);
+                $this->_canvas->add_named_dest($name, $target);
             }
         }
     }
@@ -1274,6 +1276,27 @@ abstract class AbstractRenderer
                 $dompdf->getOptions()->getChroot()
             ) ?? $href;
             $this->_canvas->add_link($href, $x, $y, $w, $h);
+        }
+    }
+
+    /**
+     * Adds a bookmark item if the frame is registered for the outline.
+     *
+     * @param Frame   $frame
+     * @param float[] $borderBox
+     */
+    protected function addOutlineItem(Frame $frame, array $border_box): void {
+        if ($frame->is_in_outline()) {
+            $outline_id = $frame->get_outline_id();
+            $outline_parent_id = $frame->get_outline_parent_id();
+            $title = $frame->get_node()->textContent;
+            $target = ['mode' => 'XYZ', 'top' => $border_box[1]];
+            $this->_canvas->add_outline_item(
+                $outline_id,
+                $outline_parent_id,
+                $title,
+                $target
+            );
         }
     }
 
